@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Taskboard</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <p class="eyebrow">LINUX ADMIN LAB</p>
+          <h1>Server Taskboard</h1>
+          <p class="subtitle">Небольшой журнал задач для обслуживания сервера.</p>
+        </div>
+        <span id="api-status" class="status">API: проверка…</span>
+      </header>
+
+      <section class="panel">
+        <form id="task-form">
+          <label>
+            Задача
+            <input id="title" maxlength="120" required placeholder="Например: проверить свободное место">
+          </label>
+          <label>
+            Описание
+            <textarea id="description" maxlength="1000" rows="3" placeholder="Необязательные детали"></textarea>
+          </label>
+          <button type="submit">Добавить задачу</button>
+          <p id="form-error" class="error" role="alert"></p>
+        </form>
+      </section>
+
+      <section class="task-section">
+        <div class="section-heading">
+          <h2>Задачи</h2>
+          <button id="refresh" class="secondary" type="button">Обновить</button>
+        </div>
+        <div id="tasks" class="tasks"></div>
+        <p id="empty" class="empty" hidden>Задач пока нет.</p>
+      </section>
+    </main>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
+

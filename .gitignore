@@ -18,3 +18,14 @@ id_ed25519
 .DS_Store
 Thumbs.db
 
+# Python virtual environment
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+htmlcov/
