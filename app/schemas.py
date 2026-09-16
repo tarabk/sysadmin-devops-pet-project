@@ -21,6 +21,13 @@ class TaskUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     completed: bool | None = None
 
+    @field_validator("title", "description", "completed", mode="before")
+    @classmethod
+    def reject_explicit_null(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("field must not be null")
+        return value
+
     @field_validator("title")
     @classmethod
     def title_must_contain_text(cls, value: str | None) -> str | None:

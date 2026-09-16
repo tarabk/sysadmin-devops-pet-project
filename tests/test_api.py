@@ -1,3 +1,5 @@
+import pytest
+
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
@@ -38,3 +40,23 @@ def test_ready_fails_when_database_is_unavailable() -> None:
         response = client.get("/ready")
     assert response.status_code == 503
     assert response.json() == {"status": "not ready", "database": "unavailable"}
+
+@pytest.mark.parametrize("field", ["title", "description", "completed"])
+def test_update_rejects_null_fields(client: TestClient, field: str) -> None:
+    created = client.post(
+        "/api/tasks",
+        json={"title": "Check backups", "description": "Keep this text"},
+    )
+    assert created.status_code == 201
+    original = created.json()
+    task_id = original["id"]
+
+    response = client.patch(
+        f"/api/tasks/{task_id}",
+        json={field: None},
+    )
+    assert response.status_code == 422
+
+    tasks = client.get("/api/tasks")
+    assert tasks.status_code == 200
+    assert tasks.json() == [original]
