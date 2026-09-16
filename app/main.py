@@ -37,7 +37,12 @@ def create_app(
 
     @application.exception_handler(SQLAlchemyError)
     async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
-        logger.exception("Database operation failed: %s %s", request.method, request.url.path)
+        logger.error(
+            "Database operation failed: method=%s path=%s error_type=%s",
+            request.method,
+            request.url.path,
+            type(exc).__name__,
+        )
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"detail": "database unavailable"},
@@ -52,8 +57,11 @@ def create_app(
         try:
             with request.app.state.db_engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
-        except SQLAlchemyError:
-            logger.exception("Readiness check failed")
+        except SQLAlchemyError as exc:
+            logger.error(
+                "Readiness check failed: error_type=%s",
+                type(exc).__name__,
+            )
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content={"status": "not ready", "database": "unavailable"},
