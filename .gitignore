@@ -1,0 +1,20 @@
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+
+# Private SSH keys with standard filenames
+id_rsa
+id_ecdsa
+id_ed25519
+
+# Logs and backups
+*.log
+/backups/
+
+# Temporary files
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
