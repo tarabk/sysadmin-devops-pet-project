@@ -1,41 +1,113 @@
 # SysAdmin to DevOps Pet Project
 
-A learning project demonstrating Linux system administration skills
-and a gradual transition to automation.
+A hands-on project documenting my progress from Linux administration
+to DevOps. I use Server Taskboard, a small web application, to practise
+deployment, security, backups and recovery, then move on to containers
+and automation.
 
-## Goal
+The application supports creating tasks, marking them complete and
+deleting them.
 
-Deploy a web application with PostgreSQL on Oracle Linux in Azure,
-configure security, backups, and recovery,
-then implement containerization and automation.
+The manual deployment on Oracle Linux in Azure is working.
+Next steps include Docker Compose, Zabbix monitoring, Ansible
+and CI/CD with GitHub Actions.
+
+# Server Taskboard
+
+My Linux administration pet project. I deployed a small task board on
+Oracle Linux in Azure and configured the server, database, networking,
+HTTPS and backups manually.
+
+The application supports creating tasks, marking them complete and
+deleting them. The next stage is containerization and automation.
+
+## Stack
+
+- Oracle Linux 9.8 on an Azure VM — 2 vCPU, 4 GiB RAM.
+- Python 3.11, FastAPI, SQLAlchemy and Alembic.
+- PostgreSQL 16.
+- Plain HTML, CSS and JavaScript frontend.
+- Nginx, systemd, firewalld and SELinux.
+- Let's Encrypt and Certbot.
 
 ## Current Status
 
-The application runs locally on Oracle Linux 9.8 in WSL2.
+The application runs on the VM without containers.
 
-- Python 3.11 with dependencies installed in a virtual environment.
-- PostgreSQL 16 with a dedicated application role and database.
-- Local database access using SCRAM-SHA-256 authentication.
-- Alembic migration 0001 applied successfully.
-- Backend running on 127.0.0.1:8000.
-- Frontend running on 127.0.0.1:8080 with an English interface.
-- Health and database readiness endpoints verified.
-- Six automated tests passing.
-- Task creation, completion, persistence after page reload,
-  and deletion verified manually.
+- Backend managed by systemd under a dedicated Linux account.
+- Separate PostgreSQL roles for migrations and runtime access.
+- SSH key authentication; root SSH login and password login disabled.
+- Network access restricted through Azure NSG, firewalld and nginx.
+- SELinux enforcing.
+- Environment files stored outside the repository with restricted permissions.
+- HTTPS configured, with HTTP-to-HTTPS redirection.
+- Certificate renewal scheduled, with a hook to validate and reload nginx.
+- Daily database backups through a systemd timer, with seven-day retention.
+- Deployment configurations and scripts tracked in `deploy/`.
 
-The application has not yet been deployed to Azure.
+The app has no user authentication, so SSH and HTTPS access are restricted
+to my public IP. The HTTP ACME challenge path remains publicly accessible
+for certificate renewal.
 
-## Implementation Roadmap
+One database backup has been copied off the VM and verified with SHA-256.
+Off-VM transfers are currently manual.
 
-1. Prepare the application and verify that it runs locally.
-2. Create and configure an Azure virtual machine.
-3. Configure SSH access, user accounts, firewalld, and SELinux.
-4. Deploy PostgreSQL, run the backend as a systemd service, and configure Nginx.
-5. Configure DNS and HTTPS.
-6. Verify logging, backups, recovery, and failure handling.
-7. Containerize the application using Docker Compose.
-8. Automate server configuration with Ansible.
-9. Set up CI/CD with GitHub Actions.
-10. Add Prometheus, Grafana, and alerting.
-11. Define the cloud infrastructure using Terraform.
+## Deployment Layout
+
+Nginx serves the frontend and proxies `/api/` requests to Uvicorn on
+`127.0.0.1:8000`. PostgreSQL listens on loopback addresses only.
+
+The frontend uses the same origin as the API. SQLAlchemy handles database
+access, and Alembic manages schema migrations.
+
+The files in `deploy/` reflect my Azure VM configuration.
+Review domain names, IP restrictions and paths before reusing them.
+Credentials, private keys and database dumps are excluded from Git.
+
+## Running Locally
+
+Requires Python 3.11 and PostgreSQL 16.
+Configuration variables are listed in `.env.example`.
+
+See [Application setup](docs/APPLICATION.md) for installation,
+database migrations and startup instructions.
+
+The frontend has no build step or npm dependencies.
+
+## Verification
+
+- Six application tests passed during local setup.
+- Health and database readiness endpoints checked.
+- Task creation, updates, deletion and persistence tested.
+- HTTPS certificate accepted by the browser.
+- Certificate renewal dry run passed, including the nginx reload hook.
+- Database backup restored into a separate test database.
+- Backup service tested manually; daily timer enabled.
+
+## Repository
+
+| Path | Contents |
+|---|---|
+| `app/` | FastAPI backend |
+| `frontend/` | HTML, CSS and JavaScript |
+| `migrations/` | Alembic migrations |
+| `tests/` | Application tests |
+| `deploy/nginx/` | Nginx configuration |
+| `deploy/systemd/` | Backend service and backup service/timer |
+| `deploy/scripts/` | Backup and certificate reload scripts |
+| `docs/` | Setup instructions and troubleshooting notes |
+
+## Next Steps
+
+- Verify startup after a VM reboot and test service failure recovery.
+- Automate off-VM backup transfers.
+- Containerize the application with Docker Compose.
+- Add Zabbix monitoring and Telegram notifications.
+- Automate server configuration with Ansible.
+- Set up CI/CD with GitHub Actions.
+
+## Documentation
+
+- [Application setup](docs/APPLICATION.md)
+- [Server setup and troubleshooting](docs/SRV-SETUP.md)
+- [Deployment configurations](deploy/)
