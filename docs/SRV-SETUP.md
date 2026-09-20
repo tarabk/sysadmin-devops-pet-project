@@ -97,6 +97,18 @@
 - Hook validates nginx configuration before reloading the service.
 - Renewal dry run with deploy hooks completed successfully.
 
+## Database Backups
+- Custom-format dumps stored in `/var/backups/taskboard`.
+- Backup directory: `postgres:postgres`, mode `0700`; archives: `0600`.
+- Script: `/usr/local/sbin/taskboard-backup.sh`, `root:postgres`, mode `0750`.
+- `taskboard-backup.service` runs the script as `postgres`.
+- `taskboard-backup.timer` schedules daily backups at 03:00 UTC.
+- Persistent timer enabled to catch up after a missed run.
+- Archives older than seven days removed after a successful backup.
+- Manual restore to `taskboard_restore_test` verified.
+- One archive copied to local WSL and verified with SHA-256.
+- Off-VM transfers are currently manual.
+
 ## Deployment Status
 - Manual deployment complete; no containers yet.
 - PostgreSQL, backend, frontend, DNS and HTTPS working.
