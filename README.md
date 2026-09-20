@@ -83,6 +83,7 @@ The frontend has no build step or npm dependencies.
 - Certificate renewal dry run passed, including the nginx reload hook.
 - Database backup restored into a separate test database.
 - Backup service tested manually; daily timer enabled.
+- VM reboot tested: services and timers started automatically; saved tasks remained available.
 
 ## Repository
 
@@ -99,7 +100,7 @@ The frontend has no build step or npm dependencies.
 
 ## Next Steps
 
-- Verify startup after a VM reboot and test service failure recovery.
+- Test service failure recovery.
 - Automate off-VM backup transfers.
 - Containerize the application with Docker Compose.
 - Add Zabbix monitoring and Telegram notifications.
