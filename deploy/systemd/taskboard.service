@@ -1,0 +1,18 @@
+[Unit]
+Description=Taskboard backend API
+Wants=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=exec
+User=taskboard-user
+Group=taskboard
+WorkingDirectory=/opt/taskboard
+EnvironmentFile=/etc/taskboard/backend.env
+ExecStart=/opt/taskboard/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

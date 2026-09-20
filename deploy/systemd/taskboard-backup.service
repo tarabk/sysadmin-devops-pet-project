@@ -1,0 +1,12 @@
+[Unit]
+Description=Taskboard PostgreSQL backup
+Requires=postgresql.service
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+WorkingDirectory=/var/backups/taskboard
+UMask=0077
+ExecStart=/usr/local/sbin/taskboard-backup.sh

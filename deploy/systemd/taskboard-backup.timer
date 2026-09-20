@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Taskboard database backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+Unit=taskboard-backup.service
+
+[Install]
+WantedBy=timers.target
