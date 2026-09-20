@@ -1,81 +1,114 @@
-# Server Taskboard
+# Server Taskboard — Application Setup
 
-Навчальний застосунок для ручного розгортання на звичайному Linux-сервері. Він дає змогу створювати завдання з обслуговування сервера, позначати їх виконаними та видаляти.
+A task board for creating, updating and deleting server maintenance tasks.
 
-## Склад
+## Components
 
-- `frontend/` — HTML, CSS і JavaScript без збирача та npm-залежностей;
-- `app/` — REST API на FastAPI;
-- PostgreSQL — постійне зберігання завдань;
-- `migrations/` — міграції Alembic, які запускаються окремою командою;
-- `tests/` — перевірки основної операції, валідації та поведінки за недоступної БД.
+- `app/` — FastAPI backend with SQLAlchemy.
+- `frontend/` — HTML, CSS and JavaScript; no build step or npm dependencies.
+- PostgreSQL — task storage.
+- `migrations/` — Alembic database migrations.
+- `tests/` — API, validation and database failure tests.
+- `deploy/` — nginx, systemd and maintenance scripts for the Azure deployment.
 
-У проєкті навмисно немає Docker, конфігурацій Nginx/systemd, CI/CD, хмарних ресурсів, HTTPS, резервного копіювання, моніторингу та скриптів для встановлення PostgreSQL або створення системних користувачів.
+For server configuration, see [Server Setup](SRV-SETUP.md).
+The instructions below cover local development.
 
-## 1. Що потрібно встановити
+## Requirements
 
-- Python 3.11 або новішої версії;
-- PostgreSQL 14 або новішої версії;
-- утиліти вашої ОС для створення віртуального середовища Python.
+Tested with:
 
-PostgreSQL, базу даних і роль створіть вручну засобами операційної системи та PostgreSQL. Застосунок цього не робить.
+- Python 3.11.
+- PostgreSQL 16.
 
-## 2. Підготувати бекенд
+Create the PostgreSQL role and database before starting.
+The application does not install PostgreSQL, create roles or create the database.
 
-Виконуйте команди з кореневого каталогу проєкту:
+For local setup, the migration role needs permission to create database
+objects. A separate runtime role needs access to the application tables
+and sequences. The deployed role configuration is documented in
+[Server Setup](SRV-SETUP.md).
+
+## Backend Setup
+
+Run from the repository root:
 
 ```bash
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.lock.txt
+python -m pip install -r requirements.lock.txt
+```
+
+For the first setup, copy the configuration template:
+
+```bash
 cp .env.example .env
+chmod 600 .env
 ```
 
-Відкрийте `.env` і задайте реальні параметри:
+Edit `.env` with your local database settings:
 
-- `APP_HOST` — адреса, яку прослуховує бекенд, наприклад `127.0.0.1` за зворотним проксі або `0.0.0.0` для прямого доступу;
-- `APP_PORT` — порт бекенду;
-- `DATABASE_URL` — рядок підключення до створеної вами бази даних PostgreSQL;
-- `CORS_ORIGINS` — адреси фронтенду, розділені комами;
-- `LOG_LEVEL` — рівень журналювання (`INFO`, `WARNING` тощо).
+```dotenv
+APP_HOST=127.0.0.1
+APP_PORT=8000
+DATABASE_URL=postgresql+psycopg://taskboard_user:change_me@127.0.0.1:5432/taskboard
+CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080
+LOG_LEVEL=INFO
+```
 
-Файл `.env` ігнорується Git. Не додавайте справжні паролі до репозиторію.
+| Variable | Purpose |
+|---|---|
+| `APP_HOST`, `APP_PORT` | Application settings; the Uvicorn commands below set the listener explicitly |
+| `DATABASE_URL` | PostgreSQL connection URL |
+| `CORS_ORIGINS` | Comma-separated browser origins allowed to access the API |
+| `LOG_LEVEL` | Application logging level |
 
-`requirements.lock.txt` фіксує все дерево залежностей для відтворюваного встановлення. `requirements.txt` залишено як короткий перелік прямих залежностей проєкту.
+Replace `change_me` with the database password. Percent-encode special
+characters in credentials when placing them in a connection URL.
 
-## 3. Застосувати міграції
+Settings are loaded from `.env` in the working directory.
+Environment variables take precedence.
 
-Міграції не запускаються під час старту застосунку:
+`.env` is excluded from Git. Keep real credentials out of tracked files.
+
+`requirements.lock.txt` contains pinned dependencies.
+`requirements.txt` lists direct project dependencies.
+
+## Database Migrations
+
+From the repository root, with the virtual environment active:
+
+```bash
+python -m alembic upgrade head
+```
+
+Alembic uses `DATABASE_URL`. For this command, it must refer to a role
+with migration privileges. Use the runtime role when starting the backend.
+
+On the Azure VM, migration and runtime credentials are stored in separate
+environment files. Do not replace the backend credentials with migration
+credentials.
+
+Migrations run separately; starting the API does not apply them.
+
+## Start the Backend
+
+From the repository root:
 
 ```bash
 source .venv/bin/activate
-alembic upgrade head
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-За потреби останню міграцію можна відкотити:
+This binds the API to localhost on port 8000. Changing `APP_HOST` or
+`APP_PORT` in `.env` does not override these explicit command-line arguments.
 
-```bash
-alembic downgrade -1
-```
+Logs are written to stdout/stderr. Under systemd, they are available
+through the service journal.
 
-## 4. Запустити бекенд
+## Start the Frontend
 
-Змінні адреси та порту зчитує команда запуску оболонки:
-
-```bash
-source .venv/bin/activate
-set -a
-source .env
-set +a
-uvicorn app.main:app --host "$APP_HOST" --port "$APP_PORT"
-```
-
-Uvicorn записує журнали доступу та помилок, а застосунок — події й помилки БД у stdout/stderr. Застосунок не створює файлів журналів.
-
-## 5. Налаштувати та запустити фронтенд
-
-Змініть `frontend/config.js`, вказавши публічну адресу API:
+For local development, set `frontend/config.js` to:
 
 ```javascript
 window.APP_CONFIG = {
@@ -83,64 +116,98 @@ window.APP_CONFIG = {
 };
 ```
 
-Для локальної перевірки виконайте в окремому терміналі з кореневого каталогу проєкту:
+In a second terminal, from the repository root:
 
 ```bash
-python3 -m http.server 8080 --directory frontend
+python3.11 -m http.server 8080 --bind 127.0.0.1 --directory frontend
 ```
 
-Відкрийте `http://127.0.0.1:8080`. Надалі каталог `frontend/` можна обслуговувати через налаштований вами вебсервер.
+Open `http://127.0.0.1:8080`.
 
-## 6. Перевірити
+The frontend origin must match an entry in `CORS_ORIGINS`, including
+the protocol and port.
 
-Перевірка процесу бекенду без звернення до БД:
+For the nginx deployment, use:
+
+```javascript
+window.APP_CONFIG = {
+  API_BASE_URL: window.location.origin
+};
+```
+
+This requires nginx to serve the frontend and proxy `/api/` under the
+same origin. The local Python static server does not provide that proxy.
+
+## Check the Application
+
+Backend health:
 
 ```bash
 curl -i http://127.0.0.1:8000/health
 ```
 
-Перевірка готовності бекенду та з'єднання з БД:
+Expected: HTTP 200 and `{"status":"ok"}`.
+
+Database readiness:
 
 ```bash
 curl -i http://127.0.0.1:8000/ready
 ```
 
-Якщо БД працює, `/ready` поверне `200`. У разі помилки з'єднання — `503`.
+Expected: HTTP 200 and `{"status":"ready","database":"ok"}`.
+A database connection failure returns HTTP 503.
 
-Створення та отримання завдання через API:
+Readiness checks connectivity, not all table permissions.
+Test a task operation as well:
 
 ```bash
 curl -i -X POST http://127.0.0.1:8000/api/tasks \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Перевірити диск","description":"Перевірити вільне місце"}'
+  -d '{"title":"Check disk space","description":"Review available storage"}'
 
 curl -i http://127.0.0.1:8000/api/tasks
 ```
 
-Інтерактивна документація API доступна за адресою `http://127.0.0.1:8000/docs`.
+In the browser, create a task, change its status, refresh the page
+and delete it.
 
-## 7. Запустити тести
+Interactive API documentation:
+`http://127.0.0.1:8000/docs`.
 
-Тести не потребують запущеної PostgreSQL: операції з даними виконуються в тимчасовій БД SQLite, а відмова PostgreSQL імітується окремо.
+These URLs access the backend directly. The deployed nginx configuration
+proxies `/api/`; it does not expose `/health`, `/ready` or `/docs`.
+
+## Tests
+
+From the repository root:
 
 ```bash
 source .venv/bin/activate
 pytest
 ```
 
-Перевіряються:
+Tests use a temporary SQLite database and simulate database failures.
+A running PostgreSQL instance is not required.
 
-1. створення завдання, зміна його статусу та отримання списку;
-2. відмова за порожнього заголовка (`422`);
-3. доступність `/health` і відповідь `503` від `/ready`, коли БД недоступна.
+Coverage includes task operations, input validation, health checks
+and database error responses. PostgreSQL permissions and deployment
+behaviour are checked separately against the running application.
 
 ## API
 
-| Метод | Шлях | Призначення |
+| Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/health` | Перевірити, що процес бекенду працює |
-| `GET` | `/ready` | Перевірити бекенд і підключення до БД |
-| `GET` | `/api/tasks` | Отримати завдання |
-| `POST` | `/api/tasks` | Створити завдання |
-| `PATCH` | `/api/tasks/{id}` | Змінити завдання або його статус |
-| `DELETE` | `/api/tasks/{id}` | Видалити завдання |
+| `GET` | `/health` | Backend health |
+| `GET` | `/ready` | Database connectivity |
+| `GET` | `/api/tasks` | List tasks |
+| `POST` | `/api/tasks` | Create a task |
+| `PATCH` | `/api/tasks/{id}` | Update task fields or completion status |
+| `DELETE` | `/api/tasks/{id}` | Delete a task |
+
+## Access
+
+The application has no authentication. Local examples bind to loopback.
+The Azure deployment restricts access through NSG and nginx rules.
+
+See [deployment configuration](../deploy/) and
+[server setup notes](SRV-SETUP.md) for the current server settings.
