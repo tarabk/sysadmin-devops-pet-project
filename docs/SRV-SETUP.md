@@ -89,8 +89,15 @@
 - External HTTP timeout: corrected the NSG source for port 80.
 - Missing HTTPS listener: fixed a missing semicolon and reloaded nginx.
 
+## Certificate Renewal
+- HTTP redirects to HTTPS; the ACME path remains accessible over HTTP.
+- `snap.certbot.renew.timer` is active with a scheduled next run.
+- Deploy hook: `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh`.
+- Hook owned by `root:root`, mode `0750`.
+- Hook validates nginx configuration before reloading the service.
+- Renewal dry run with deploy hooks completed successfully.
+
 ## Deployment Status
 - Manual deployment complete; no containers yet.
 - PostgreSQL, backend, frontend, DNS and HTTPS working.
-- Pending: HTTP-to-HTTPS redirect, renewal schedule verification,
-  nginx reload hook and Certbot renewal dry run.
+- HTTP-to-HTTPS redirect and certificate renewal checks completed.
