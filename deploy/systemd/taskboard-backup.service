@@ -1,7 +1,8 @@
 [Unit]
-Description=Taskboard PostgreSQL backup
+Description=Taskboard PostgreSQL backup and Azure upload
 Requires=postgresql.service
-After=postgresql.service
+Wants=network-online.target
+After=postgresql.service network-online.target
 
 [Service]
 Type=oneshot
@@ -10,3 +11,4 @@ Group=postgres
 WorkingDirectory=/var/backups/taskboard
 UMask=0077
 ExecStart=/usr/local/sbin/taskboard-backup.sh
+TimeoutStartSec=15min

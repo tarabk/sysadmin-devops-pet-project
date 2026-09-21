@@ -32,7 +32,7 @@ deleting them. The next stage is containerization and automation.
 
 ## Current Status
 
-The application runs on the VM without containers.
+The application runs on the Azure VM without containers.
 
 - Backend managed by systemd under a dedicated Linux account.
 - Separate PostgreSQL roles for migrations and runtime access.
@@ -41,16 +41,17 @@ The application runs on the VM without containers.
 - SELinux enforcing.
 - Environment files stored outside the repository with restricted permissions.
 - HTTPS configured, with HTTP-to-HTTPS redirection.
-- Certificate renewal scheduled, with a hook to validate and reload nginx.
-- Daily database backups through a systemd timer, with seven-day retention.
+- Certificate renewal scheduled; renewal and nginx reload hook tested.
+- Service startup after a VM reboot and backend recovery after SIGKILL verified.
+- Daily PostgreSQL backups through a systemd timer, with uploads to Azure Blob Storage using AzCopy and the VM's managed identity.
+- Local backups retained for seven days; Azure lifecycle deletion configured for blobs last modified more than 30 days ago.
+- Blob and container soft delete enabled for seven days.
+- Database restore tested; SHA-256 checksums matched after downloading a backup from Azure.
 - Deployment configurations and scripts tracked in `deploy/`.
 
 The app has no user authentication, so SSH and HTTPS access are restricted
 to my public IP. The HTTP ACME challenge path remains publicly accessible
 for certificate renewal.
-
-One database backup has been copied off the VM and verified with SHA-256.
-Off-VM transfers are currently manual.
 
 ## Deployment Layout
 
@@ -101,7 +102,6 @@ The frontend has no build step or npm dependencies.
 
 ## Next Steps
 
-- Automate off-VM backup transfers.
 - Containerize the application with Docker Compose.
 - Add Zabbix monitoring and Telegram notifications.
 - Automate server configuration with Ansible.

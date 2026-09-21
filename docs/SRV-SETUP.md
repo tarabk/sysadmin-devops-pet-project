@@ -116,7 +116,29 @@
 - `/ready` confirmed database connectivity after recovery.
 - API access restored without a manual service restart.
 
+## Azure Blob Backups
+
+- Storage account: `tarabkbackup`, resource group: `rg-lab-backups`.
+- Poland Central, Standard LRS, Hot tier.
+- Private container: `taskboard-backups`.
+- Network access restricted to the VM subnet and administrator's public IP.
+- Anonymous access and Shared Key authorization disabled.
+- VM system-assigned managed identity has Storage Blob Data Contributor access to the backup container.
+- AzCopy 10.32.7 runs as `postgres` from the backup service.
+- Each run uploads completed local dumps and skips existing blobs.
+- Upload failures stop the script before local cleanup.
+- Local retention: 7 days. Azure lifecycle deletion: more than 30 days since last modification.
+- Blob and container soft delete: 7 days.
+- Upload and download verified; SHA-256 checksums matched.
+- Updated backup service completed successfully during a manual run.
+
 ## Deployment Status
+
 - Manual deployment complete; no containers yet.
 - PostgreSQL, backend, frontend, DNS and HTTPS working.
 - HTTP-to-HTTPS redirect and certificate renewal checks completed.
+- Service startup after VM reboot and backend recovery after SIGKILL verified.
+- Daily PostgreSQL backups uploaded to Azure Blob Storage using the VM's managed identity.
+- Local retention: 7 days; Azure lifecycle deletion configured for archives older than 30 days.
+- Database restore tested; SHA-256 checksums matched after downloading a backup from Azure.
+- Next: containerize the application with Docker Compose.
