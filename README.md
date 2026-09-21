@@ -84,6 +84,7 @@ The frontend has no build step or npm dependencies.
 - Database backup restored into a separate test database.
 - Backup service tested manually; daily timer enabled.
 - VM reboot tested: services and timers started automatically; saved tasks remained available.
+- Backend recovery after SIGKILL tested; systemd restarted the service automatically.
 
 ## Repository
 
@@ -100,7 +101,6 @@ The frontend has no build step or npm dependencies.
 
 ## Next Steps
 
-- Test service failure recovery.
 - Automate off-VM backup transfers.
 - Containerize the application with Docker Compose.
 - Add Zabbix monitoring and Telegram notifications.

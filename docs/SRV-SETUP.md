@@ -109,6 +109,13 @@
 - One archive copied to local WSL and verified with SHA-256.
 - Off-VM transfers are currently manual.
 
+## Backend Recovery Test
+- Sent SIGKILL to the main Taskboard process.
+- systemd restarted the backend automatically.
+- Verified a new MainPID and an increased NRestarts counter.
+- `/ready` confirmed database connectivity after recovery.
+- API access restored without a manual service restart.
+
 ## Deployment Status
 - Manual deployment complete; no containers yet.
 - PostgreSQL, backend, frontend, DNS and HTTPS working.
