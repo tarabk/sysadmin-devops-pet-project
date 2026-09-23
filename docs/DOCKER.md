@@ -2,7 +2,8 @@
 
 ## Current Status
 
-Backend and PostgreSQL run in separate containers in local WSL.
+Backend, PostgreSQL and nginx run in separate containers in local WSL.
+Nginx serves the frontend and proxies API requests to the backend.
 The Azure deployment still runs without containers.
 
 ## Backend
@@ -42,10 +43,24 @@ The Azure deployment still runs without containers.
 - Tasks can be created and retrieved through the API.
 - PostgreSQL container recreated with the same volume;
   the test task remained available.
+- Nginx configuration validated with `nginx -t`.
+- Task creation, completion and deletion tested through the browser.
+- Task completion state preserved after page reload.
+
+## Frontend and Nginx
+
+- Image: `taskboard-frontend:pet-lab`.
+- Base image: `nginx:stable-alpine`.
+- Dockerfile: `deploy/nginx/Dockerfile`.
+- Configuration: `deploy/nginx/taskboard-container.conf`.
+- Container: `taskboard-frontend`.
+- Port mapping: `127.0.0.1:18080` to container port `80`.
+- Static files served from `/usr/share/nginx/html`.
+- `/api/` requests forwarded to `taskboard-api-web:8000`.
+- Frontend uses `window.location.origin` as the API base URL.
 
 ## Next Steps
 
-- Containerize nginx and the frontend.
 - Define the services in Docker Compose.
 - Configure container health checks and restart policies.
 - Test container database backups and restoration.
