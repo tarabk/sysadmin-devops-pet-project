@@ -18,6 +18,11 @@ services:
     mem_limit: 512m
     memswap_limit: 512m
     cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backend:
     image: taskboard-backend:pet-lab
@@ -42,6 +47,11 @@ services:
     mem_limit: 256m
     memswap_limit: 256m
     cpus: 0.75
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     image: taskboard-frontend:pet-lab
@@ -63,6 +73,11 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
     cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   migrate:
     image: taskboard-backend:pet-lab

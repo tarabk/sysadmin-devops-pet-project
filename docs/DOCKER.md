@@ -109,6 +109,14 @@ remain in the database.
 - Swap disabled by setting `memswap_limit` equal to `mem_limit`.
 - Initial limits for the local lab; sustained load has not been tested.
 
+## Container Logs
+
+- Logging driver: `json-file`.
+- Rotation settings: `max-size: "10m"`, `max-file: "3"`.
+- Settings verified with Docker inspect for PostgreSQL, backend and frontend.
+- Rotation applies to stdout/stderr collected by Docker.
+- Rotation at the size threshold has not been tested.
+
 ## Verified
 
 - Backend and frontend images built through Compose.
@@ -132,7 +140,6 @@ remain in the database.
 
 ## Next Steps
 
-- Configure log rotation.
 - Test database restoration and automate container database backups.
 - Document setup for a new database volume, including roles and permissions.
 - Prepare the Azure transition, including HTTPS, data transfer and rollback.
