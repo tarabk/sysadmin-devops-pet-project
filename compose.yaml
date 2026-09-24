@@ -15,6 +15,9 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
 
   backend:
     image: taskboard-backend:pet-lab
@@ -36,6 +39,9 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.75
 
   frontend:
     image: taskboard-frontend:pet-lab
@@ -54,6 +60,9 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
 
   migrate:
     image: taskboard-backend:pet-lab

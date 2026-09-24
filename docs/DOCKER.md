@@ -97,6 +97,18 @@ remain in the database.
 - The archive table of contents was read with `pg_restore --list`.
 - Restoration from this container database backup has not yet been tested.
 
+## Resource Limits
+
+| Service | Memory | CPU |
+|---|---|---|
+| PostgreSQL | 512 MiB | 1.0 |
+| Backend | 256 MiB | 0.75 |
+| Frontend | 128 MiB | 0.25 |
+
+- Memory and CPU limits verified with Docker inspect.
+- Swap disabled by setting `memswap_limit` equal to `mem_limit`.
+- Initial limits for the local lab; sustained load has not been tested.
+
 ## Verified
 
 - Backend and frontend images built through Compose.
@@ -113,10 +125,14 @@ remain in the database.
   after PostgreSQL started, without a manual backend restart.
 - After SIGKILL, Docker restarted the backend automatically;
   RestartCount increased and API access through nginx recovered.
+- With resource limits applied, 100 GET requests to `/api/tasks`
+  through nginx completed with HTTP 200 using 5 concurrent workers.
+- Average response time: 22 ms; maximum: 60 ms in the local test.
+- All three services remained healthy without container restarts.
 
 ## Next Steps
 
-- Configure resource limits and log rotation.
+- Configure log rotation.
 - Test database restoration and automate container database backups.
 - Document setup for a new database volume, including roles and permissions.
 - Prepare the Azure transition, including HTTPS, data transfer and rollback.
