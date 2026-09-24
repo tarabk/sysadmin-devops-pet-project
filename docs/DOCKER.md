@@ -88,14 +88,20 @@ sudo docker compose run --rm migrate
 The temporary container is removed after completion. Applied migrations
 remain in the database.
 
-## Backup Check
+## Backup and Restore Check
 
-- A custom-format dump was created before the Compose transition.
-- File: `/home/tarabk/taskboard-before-compose.dump`.
+- Custom-format dump: `/home/tarabk/taskboard-before-compose.dump`.
 - File permissions: `600`.
-- `pg_dump` completed with exit code 0.
-- The archive table of contents was read with `pg_restore --list`.
-- Restoration from this container database backup has not yet been tested.
+- Archive contents listed with `pg_restore --list`.
+- Restored into a separate database, `taskboard_restore_test`,
+  using `pg_restore --single-transaction`.
+- Restored migration version: `0001`.
+- Restored tasks read successfully as `taskboard_user`.
+- Runtime schema, table and sequence permissions verified.
+- Test database removed after verification.
+
+The restore used the existing PostgreSQL instance and roles.
+Recovery on a fresh instance has not yet been tested.
 
 ## Resource Limits
 
@@ -140,6 +146,6 @@ remain in the database.
 
 ## Next Steps
 
-- Test database restoration and automate container database backups.
+- Automate container database backups.
 - Document setup for a new database volume, including roles and permissions.
 - Prepare the Azure transition, including HTTPS, data transfer and rollback.
