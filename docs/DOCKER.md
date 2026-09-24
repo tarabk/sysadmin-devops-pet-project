@@ -123,6 +123,24 @@ Recovery on a fresh instance has not yet been tested.
 - Rotation applies to stdout/stderr collected by Docker.
 - Rotation at the size threshold has not been tested.
 
+## Scheduled Backups
+
+- Script: `deploy/scripts/taskboard-container-backup.sh`.
+- Installed script: `/usr/local/sbin/taskboard-container-backup.sh`.
+- Service: `taskboard-container-backup.service`, runs as root.
+- Timer: `taskboard-container-backup.timer`, enabled.
+- Schedule: daily at 03:00 UTC.
+- Persistent timer catches up after a missed scheduled run.
+- Backup directory: `/var/backups/taskboard-container`, mode `700`.
+- Archives use PostgreSQL custom format, mode `600`.
+- Temporary files are renamed after a successful dump.
+- Completed archives older than seven days are removed after a successful backup.
+- Manual service execution completed successfully.
+- The first scheduled execution has not yet been observed.
+
+Backups are stored on the WSL host. Off-host transfers are not yet configured
+for this container deployment.
+
 ## Verified
 
 - Backend and frontend images built through Compose.
@@ -146,6 +164,5 @@ Recovery on a fresh instance has not yet been tested.
 
 ## Next Steps
 
-- Automate container database backups.
 - Document setup for a new database volume, including roles and permissions.
 - Prepare the Azure transition, including HTTPS, data transfer and rollback.
