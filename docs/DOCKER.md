@@ -12,9 +12,13 @@ The Azure deployment still runs without containers.
 - Project: `sysadmin-devops-pet-project`.
 - Application services: `db`, `backend`, `frontend`.
 - Migration service: `migrate`, assigned to the `tools` profile.
-- Backend waits for PostgreSQL to pass its health check.
-- Frontend waits for the backend container to start.
-- Backend and frontend health checks are not yet configured.
+- Backend and migrations wait for the PostgreSQL health check to pass.
+- Frontend waits for the backend health check to pass.
+- PostgreSQL health check uses `pg_isready`.
+- Backend health check requests `/ready`.
+- Frontend health check requests `/`.
+- PostgreSQL, backend and frontend use `restart: unless-stopped`.
+- The migration service has no automatic restart policy.
 
 ## Backend
 
@@ -103,11 +107,16 @@ remain in the database.
 - The browser interface loads through nginx.
 - Task creation, completion, deletion and persistence after page reload
   were tested during the manual container deployment.
+- All three application services report healthy.
+- With PostgreSQL stopped, `/health` returned 200 and `/ready` returned 503.
+- Backend became unhealthy during the database outage and recovered
+  after PostgreSQL started, without a manual backend restart.
+- After SIGKILL, Docker restarted the backend automatically;
+  RestartCount increased and API access through nginx recovered.
 
 ## Next Steps
 
-- Add backend and frontend health checks.
-- Configure restart policies, resource limits and log rotation.
+- Configure resource limits and log rotation.
 - Test database restoration and automate container database backups.
 - Document setup for a new database volume, including roles and permissions.
 - Prepare the Azure transition, including HTTPS, data transfer and rollback.
