@@ -2,66 +2,112 @@
 
 ## Current Status
 
-Backend, PostgreSQL and nginx run in separate containers in local WSL.
+Backend, PostgreSQL and nginx run through Docker Compose in local WSL.
 Nginx serves the frontend and proxies API requests to the backend.
 The Azure deployment still runs without containers.
 
+## Docker Compose
+
+- Configuration: `compose.yaml`.
+- Project: `sysadmin-devops-pet-project`.
+- Application services: `db`, `backend`, `frontend`.
+- Migration service: `migrate`, assigned to the `tools` profile.
+- Backend waits for PostgreSQL to pass its health check.
+- Frontend waits for the backend container to start.
+- Backend and frontend health checks are not yet configured.
+
 ## Backend
 
+- Service: `backend`.
 - Image: `taskboard-backend:pet-lab`.
 - Base image: `python:3.11-slim`.
+- Dockerfile: `Dockerfile`.
 - Dependencies installed from `requirements.lock.txt`.
 - Runs as `taskboard`, UID 10001.
 - Includes application code and Alembic migrations.
-- Container: `taskboard-api-web`.
 - Port mapping: `127.0.0.1:18000` to container port `8000`.
 
 ## PostgreSQL
 
+- Service: `db`.
 - Image: `postgres:16`.
-- Container: `taskboard-sql`.
 - Database: `taskboard`.
 - Database owner and migration role: `taskboard_migrator`.
 - Runtime role: `taskboard_user`.
 - Runtime permissions: schema usage, task CRUD and task ID sequence usage.
-- Named volume: `taskboard-sqldata`.
+- External volume: `taskboard-sqldata`.
 - Container data directory: `/var/lib/postgresql/data`.
 - Port 5432 is not published on the host.
+- Health check: `pg_isready`, every 10 seconds, with a 5-second timeout,
+  3 retries and a 30-second start period.
 
-## Network and Configuration
-
-- Docker network: `taskboard-net`, bridge driver.
-- Backend database address: `taskboard-sql:5432`.
-- Configuration directory: `/home/tarabk/.config/taskboard/`, outside the repository.
-- Environment files: `postgres.env`, `migration.env`, `backend.env`.
-- Environment file permissions: `600`.
-- Migrations run in a temporary container from the backend image.
-
-## Verified
-
-- `/health` and `/ready` return HTTP 200.
-- Tasks can be created and retrieved through the API.
-- PostgreSQL container recreated with the same volume;
-  the test task remained available.
-- Nginx configuration validated with `nginx -t`.
-- Task creation, completion and deletion tested through the browser.
-- Task completion state preserved after page reload.
+Compose reuses the existing volume. The database, roles and permissions
+were created manually; setup for an empty volume is not yet automated.
 
 ## Frontend and Nginx
 
+- Service: `frontend`.
 - Image: `taskboard-frontend:pet-lab`.
 - Base image: `nginx:stable-alpine`.
 - Dockerfile: `deploy/nginx/Dockerfile`.
 - Configuration: `deploy/nginx/taskboard-container.conf`.
-- Container: `taskboard-frontend`.
 - Port mapping: `127.0.0.1:18080` to container port `80`.
 - Static files served from `/usr/share/nginx/html`.
-- `/api/` requests forwarded to `taskboard-api-web:8000`.
+- `/api/` requests forwarded to `backend:8000`.
 - Frontend uses `window.location.origin` as the API base URL.
+
+## Network and Configuration
+
+- Compose creates the bridge network `sysadmin-devops-pet-project_default`.
+- Services communicate using their Compose service names.
+- Backend database address: `db:5432`.
+- Configuration directory: `/home/tarabk/.config/taskboard/`, outside the repository.
+- Environment files: `postgres.env`, `migration.env`, `backend.env`.
+- Environment file permissions: `600`.
+- Compose reads environment files with `format: raw`.
+- Environment file paths currently target the local WSL setup.
+
+## Migrations
+
+- The `migrate` service uses the backend image and `migration.env`.
+- It waits for the PostgreSQL health check to pass.
+- Its command is `python -m alembic upgrade head`.
+- Migrations are run explicitly before starting the updated backend.
+- A normal Compose startup without the `tools` profile skips `migrate`.
+
+Run from the repository root:
+
+```bash
+sudo docker compose run --rm migrate
+```
+
+The temporary container is removed after completion. Applied migrations
+remain in the database.
+
+## Backup Check
+
+- A custom-format dump was created before the Compose transition.
+- File: `/home/tarabk/taskboard-before-compose.dump`.
+- File permissions: `600`.
+- `pg_dump` completed with exit code 0.
+- The archive table of contents was read with `pg_restore --list`.
+- Restoration from this container database backup has not yet been tested.
+
+## Verified
+
+- Backend and frontend images built through Compose.
+- PostgreSQL reports `healthy`.
+- `/health` and `/ready` return HTTP 200.
+- `/api/tasks` responds through nginx on port 18080.
+- Existing tasks remained available after the Compose transition.
+- The browser interface loads through nginx.
+- Task creation, completion, deletion and persistence after page reload
+  were tested during the manual container deployment.
 
 ## Next Steps
 
-- Define the services in Docker Compose.
-- Configure container health checks and restart policies.
-- Test container database backups and restoration.
-- Prepare the Azure deployment.
+- Add backend and frontend health checks.
+- Configure restart policies, resource limits and log rotation.
+- Test database restoration and automate container database backups.
+- Document setup for a new database volume, including roles and permissions.
+- Prepare the Azure transition, including HTTPS, data transfer and rollback.

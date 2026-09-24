@@ -1,0 +1,57 @@
+name: sysadmin-devops-pet-project
+
+services:
+  db:
+    image: postgres:16
+    env_file:
+      - path: /home/tarabk/.config/taskboard/postgres.env
+        format: raw
+    volumes:
+      - "db_data:/var/lib/postgresql/data"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  backend:
+    image: taskboard-backend:pet-lab
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: /home/tarabk/.config/taskboard/backend.env
+        format: raw
+    ports:
+      - "127.0.0.1:18000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: taskboard-frontend:pet-lab
+    build:
+      context: .
+      dockerfile: deploy/nginx/Dockerfile
+    ports:
+      - "127.0.0.1:18080:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  migrate:
+    image: taskboard-backend:pet-lab
+    profiles: ["tools"]
+    env_file:
+      - path: /home/tarabk/.config/taskboard/migration.env
+        format: raw
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+
+volumes:
+  db_data:
+    external: true
+    name: taskboard-sqldata
