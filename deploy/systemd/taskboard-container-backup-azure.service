@@ -1,0 +1,14 @@
+[Unit]
+Description=Taskboard container database backup and Azure upload
+Requires=docker.service
+Wants=network-online.target
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+WorkingDirectory=/var/backups/taskboard-container
+ExecStart=/usr/local/sbin/taskboard-container-backup-azure.sh
+TimeoutStartSec=15min

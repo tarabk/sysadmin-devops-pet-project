@@ -4,9 +4,9 @@ services:
   db:
     image: postgres:16
     env_file:
-      - path: /home/tarabk/.config/taskboard/postgres.env
+      - path: ${TASKBOARD_ENV_DIR:-/home/tarabk/.config/taskboard}/postgres.env
         format: raw
-      - path: /home/tarabk/.config/taskboard/bootstrap.env
+      - path: ${TASKBOARD_ENV_DIR:-/home/tarabk/.config/taskboard}/bootstrap.env
         format: raw
     volumes:
       - "db_data:/var/lib/postgresql/data"
@@ -16,6 +16,7 @@ services:
         read_only: true
         bind:
           create_host_path: false
+          selinux: Z
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres"]
       interval: 10s
@@ -38,7 +39,7 @@ services:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - path: /home/tarabk/.config/taskboard/backend.env
+      - path: ${TASKBOARD_ENV_DIR:-/home/tarabk/.config/taskboard}/backend.env
         format: raw
     ports:
       - "127.0.0.1:18000:8000"
@@ -70,7 +71,7 @@ services:
       - "127.0.0.1:18080:80"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/"]
@@ -91,7 +92,7 @@ services:
     image: taskboard-backend:pet-lab
     profiles: ["tools"]
     env_file:
-      - path: /home/tarabk/.config/taskboard/migration.env
+      - path: ${TASKBOARD_ENV_DIR:-/home/tarabk/.config/taskboard}/migration.env
         format: raw
     depends_on:
       db:

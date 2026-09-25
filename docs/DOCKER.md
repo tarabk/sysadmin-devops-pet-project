@@ -4,7 +4,8 @@
 
 Backend, PostgreSQL and nginx run through Docker Compose in local WSL.
 Nginx serves the frontend and proxies API requests to the backend.
-The Azure deployment still runs without containers.
+The application also runs through Docker Compose on Azure.
+See [Azure deployment](AZURE-DOCKER.md) for server operations and recovery.
 
 ## Docker Compose
 

@@ -1,5 +1,9 @@
 # Server Setup
 
+The sections below record the initial native deployment.
+The current container deployment is documented in
+[Azure Docker deployment](AZURE-DOCKER.md).
+
 ## Infrastructure
 - Azure VM: vm-lab, Poland Central, availability zone 2.
 - OS: Oracle Linux 9.8, x64.
@@ -107,7 +111,6 @@
 - Archives older than seven days removed after a successful backup.
 - Manual restore to `taskboard_restore_test` verified.
 - One archive copied to local WSL and verified with SHA-256.
-- Off-VM transfers are currently manual.
 
 ## Backend Recovery Test
 - Sent SIGKILL to the main Taskboard process.
@@ -134,11 +137,13 @@
 
 ## Deployment Status
 
-- Manual deployment complete; no containers yet.
-- PostgreSQL, backend, frontend, DNS and HTTPS working.
-- HTTP-to-HTTPS redirect and certificate renewal checks completed.
-- Service startup after VM reboot and backend recovery after SIGKILL verified.
-- Daily PostgreSQL backups uploaded to Azure Blob Storage using the VM's managed identity.
-- Local retention: 7 days; Azure lifecycle deletion configured for archives older than 30 days.
-- Database restore tested; SHA-256 checksums matched after downloading a backup from Azure.
-- Next: containerize the application with Docker Compose.
+- Application migrated to Docker Compose on the Azure VM.
+- PostgreSQL, backend and frontend run in separate containers.
+- Host nginx retains HTTPS, certificate renewal and IP restrictions.
+- Final database transfer completed after stopping application writes.
+- HTTPS access and browser CRUD operations verified.
+- Container database backups scheduled daily and uploaded to Azure Blob Storage.
+- Downloaded archive verified with SHA-256 and restored into a test database.
+- Native Taskboard, PostgreSQL and the old backup timer disabled.
+- Previous application files and database retained for recovery.
+- Operational procedures: [Azure Docker deployment](AZURE-DOCKER.md).

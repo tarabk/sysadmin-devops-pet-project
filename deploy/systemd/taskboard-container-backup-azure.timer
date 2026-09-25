@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Taskboard container backup and Azure upload
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+Unit=taskboard-container-backup-azure.service
+
+[Install]
+WantedBy=timers.target
