@@ -1,0 +1,39 @@
+modules:
+  http_200:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: &id001
+      - 200
+      follow_redirects: false
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+  taskboard_https:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: *id001
+      follow_redirects: false
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+      fail_if_not_ssl: true
+      headers:
+        Host: tarabk-pet.polandcentral.cloudapp.azure.com
+      tls_config:
+        server_name: tarabk-pet.polandcentral.cloudapp.azure.com
+        insecure_skip_verify: false
+  taskboard_dns:
+    prober: dns
+    timeout: 5s
+    dns:
+      transport_protocol: udp
+      preferred_ip_protocol: ip4
+      query_name: tarabk-pet.polandcentral.cloudapp.azure.com
+      query_type: A
+      valid_rcodes:
+      - NOERROR
+      validate_answer_rrs:
+        fail_if_none_matches_regexp:
+        - .*\sIN\s+A\s+([0-9]{1,3}\.){3}[0-9]{1,3}

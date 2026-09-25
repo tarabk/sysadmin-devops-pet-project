@@ -1,0 +1,177 @@
+name: taskboard-monitoring
+
+services:
+  prometheus:
+    image: quay.io/prometheus/prometheus:v3.15.0
+    network_mode: host
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=2GB
+      - --web.listen-address=127.0.0.1:9090
+    volumes:
+      - type: bind
+        source: ./deploy/monitoring/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+        bind:
+          create_host_path: false
+          selinux: Z
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    network_mode: host
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=127.0.0.1:9100
+      - --no-collector.timex
+    volumes:
+      - type: bind
+        source: /
+        target: /host
+        read_only: true
+        bind:
+          propagation: rslave
+          create_host_path: false
+    security_opt:
+      - label:disable
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.60.6
+    privileged: true
+    cgroup: host
+    pid: host
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --enable_metrics=cpu,memory,network
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service
+    ports:
+      - "127.0.0.1:18081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /var/lib/containerd:/var/lib/containerd:ro
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  blackbox:
+    image: quay.io/prometheus/blackbox-exporter:v0.28.0
+    network_mode: host
+    command:
+      - --config.file=/etc/blackbox_exporter/blackbox.yml
+      - --web.listen-address=127.0.0.1:9115
+    volumes:
+      - type: bind
+        source: ./deploy/monitoring/blackbox.yml
+        target: /etc/blackbox_exporter/blackbox.yml
+        read_only: true
+        bind:
+          create_host_path: false
+          selinux: Z
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  grafana:
+    image: grafana/grafana:13.2.2
+    network_mode: host
+    env_file:
+      - path: /etc/taskboard-monitoring/grafana.env
+        format: raw
+    environment:
+      GF_SERVER_HTTP_ADDR: "127.0.0.1"
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_SERVER_ROOT_URL: "http://localhost:19300/"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  alertmanager:
+    image: quay.io/prometheus/alertmanager:v0.34.1
+    user: "65534:65534"
+    network_mode: host
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=127.0.0.1:9093
+      - --cluster.listen-address=
+    volumes:
+      - type: bind
+        source: /etc/taskboard-monitoring/alertmanager.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+        bind:
+          create_host_path: false
+          selinux: Z
+      - type: bind
+        source: /etc/taskboard-monitoring/telg-bot
+        target: /run/secrets/telegram-bot-token
+        read_only: true
+        bind:
+          create_host_path: false
+          selinux: Z
+      - alertmanager_data:/alertmanager
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:

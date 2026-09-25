@@ -1,0 +1,24 @@
+modules:
+  http_200:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      follow_redirects: false
+      preferred_ip_protocol: ip4
+
+  taskboard_https:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      follow_redirects: false
+      preferred_ip_protocol: ip4
+      fail_if_not_ssl: true
+      headers:
+        Host: tarabk-pet.polandcentral.cloudapp.azure.com
+      tls_config:
+        server_name: tarabk-pet.polandcentral.cloudapp.azure.com
+        insecure_skip_verify: false

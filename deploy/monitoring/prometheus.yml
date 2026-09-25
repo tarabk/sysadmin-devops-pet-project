@@ -1,0 +1,79 @@
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+
+alerting:
+  alertmanagers:
+    - api_version: v2
+      static_configs:
+        - targets:
+            - "127.0.0.1:9093"
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - "127.0.0.1:9090"
+
+  - job_name: node
+    static_configs:
+      - targets:
+          - "127.0.0.1:9100"
+        labels:
+          host: vm-lab
+          environment: lab
+
+  - job_name: cadvisor
+    static_configs:
+      - targets:
+          - "127.0.0.1:18081"
+        labels:
+          host: vm-lab
+          environment: lab
+
+  - job_name: blackbox
+    static_configs:
+      - targets:
+          - "127.0.0.1:9115"
+        labels:
+          host: vm-lab
+          environment: lab
+
+  - job_name: taskboard_ready
+    metrics_path: /probe
+    params:
+      module:
+        - http_200
+    static_configs:
+      - targets:
+          - "http://127.0.0.1:18000/ready"
+        labels:
+          host: vm-lab
+          environment: lab
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: "127.0.0.1:9115"
+
+  - job_name: taskboard_https
+    metrics_path: /probe
+    params:
+      module:
+        - taskboard_https
+    static_configs:
+      - targets:
+          - "https://127.0.0.1/api/tasks"
+        labels:
+          host: vm-lab
+          environment: lab
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: "127.0.0.1:9115"

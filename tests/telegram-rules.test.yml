@@ -1,0 +1,108 @@
+rule_files:
+- ../deploy/monitoring/telegram-rules.yml
+evaluation_interval: 30s
+group_eval_order:
+- taskboard.recording
+- taskboard.alerts
+tests:
+- name: VM high CPU waits five minutes after first rate sample
+  interval: 30s
+  input_series:
+  - &id001
+    series: up{job="node",instance="vm"}
+    values: 1x20
+  - series: node_cpu_seconds_total{job="node",instance="vm",cpu="0",mode="idle"}
+    values: 0+0.3x20
+  alert_rule_test:
+  - eval_time: 4m
+    alertname: VMCPULimitExceeded
+    exp_alerts: []
+  - eval_time: 6m
+    alertname: VMCPULimitExceeded
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        host: vm-lab
+      exp_annotations:
+        summary: VM CPU usage is above 95%
+        description: 'vm-lab CPU usage: 99.0%. Threshold: >95% for 5 minutes.'
+- name: Exactly 95 percent memory does not alert
+  interval: 30s
+  input_series:
+  - *id001
+  - series: node_memory_MemTotal_bytes{job="node",instance="vm"}
+    values: 1000x20
+  - series: node_memory_MemAvailable_bytes{job="node",instance="vm"}
+    values: 50x20
+  alert_rule_test:
+  - eval_time: 6m
+    alertname: VMMemoryLimitExceeded
+    exp_alerts: []
+- name: Half-core container at 0.48 cores is 96 percent of its limit
+  interval: 30s
+  input_series:
+  - series: up{job="cadvisor",instance="vm"}
+    values: 1x20
+  - series: container_last_seen{job="cadvisor",instance="vm",id="/docker/test",container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="backend"}
+    values: 0+30x20
+  - series: container_cpu_usage_seconds_total{job="cadvisor",instance="vm",id="/docker/test",container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="backend"}
+    values: 0+14.4x20
+  - series: container_spec_cpu_quota{job="cadvisor",instance="vm",id="/docker/test",container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="backend"}
+    values: 50000x20
+  - series: container_spec_cpu_period{job="cadvisor",instance="vm",id="/docker/test",container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="backend"}
+    values: 100000x20
+  alert_rule_test:
+  - eval_time: 4m
+    alertname: ContainerCPULimitExceeded
+    exp_alerts: []
+  - eval_time: 6m
+    alertname: ContainerCPULimitExceeded
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        host: vm-lab
+        container_label_com_docker_compose_project: sysadmin-devops-pet-project
+        container_label_com_docker_compose_service: backend
+      exp_annotations:
+        summary: Container CPU usage is above 95%
+        description: 'sysadmin-devops-pet-project / backend: 96.0% of the resource
+          limit. Threshold: >95% for 5 minutes.'
+- name: Failed HTTPS requires sustained failure
+  interval: 30s
+  input_series:
+  - series: probe_success{job="taskboard_home",instance="https://127.0.0.1/"}
+    values: '0x20'
+  alert_rule_test:
+  - eval_time: 4m
+    alertname: WebsiteCheckFailed
+    exp_alerts: []
+  - eval_time: 5m
+    alertname: WebsiteCheckFailed
+    exp_alerts:
+    - exp_labels:
+        job: taskboard_home
+        instance: https://127.0.0.1/
+        severity: critical
+        host: vm-lab
+      exp_annotations:
+        summary: Website check failed
+        description: 'Check: taskboard_home. Target: https://127.0.0.1/. Failed continuously
+          for 5 minutes.'
+- name: Certificate at seven days alerts immediately
+  interval: 30s
+  input_series:
+  - series: probe_ssl_earliest_cert_expiry{job="taskboard_https",instance="https://127.0.0.1/api/tasks"}
+    values: 604800x2
+  alert_rule_test:
+  - eval_time: 0m
+    alertname: TLSCertificateExpiring
+    exp_alerts:
+    - exp_labels:
+        job: taskboard_https
+        instance: https://127.0.0.1/api/tasks
+        severity: critical
+        host: vm-lab
+      exp_annotations:
+        summary: TLS certificate expires within 7 days
+        description: 'Domain: tarabk-pet.polandcentral.cloudapp.azure.com. Remaining:
+          7.00 days.'

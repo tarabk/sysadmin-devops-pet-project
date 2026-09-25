@@ -1,0 +1,313 @@
+groups:
+- name: taskboard.recording
+  interval: 30s
+  rules:
+  - record: taskboard:vm_cpu_usage:percent
+    expr: 100 * (1 - avg(rate(node_cpu_seconds_total{job="node",mode="idle"}[1m]))) and on() (max(up{job="node"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_memory_total:bytes
+    expr: max(node_memory_MemTotal_bytes{job="node"}) and on() (max(up{job="node"}) == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_memory_available:bytes
+    expr: max(node_memory_MemAvailable_bytes{job="node"}) and on() (max(up{job="node"}) == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_disk_total:bytes
+    expr: max(node_filesystem_size_bytes{job="node",mountpoint="/",fstype="xfs"}) and on() (max(up{job="node"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_disk_free:bytes
+    expr: max(node_filesystem_avail_bytes{job="node",mountpoint="/",fstype="xfs"}) and on() (max(up{job="node"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_inode_total:count
+    expr: max(node_filesystem_files{job="node",mountpoint="/",fstype="xfs"}) and on() (max(up{job="node"}) == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_inode_free:count
+    expr: max(node_filesystem_files_free{job="node",mountpoint="/",fstype="xfs"}) and on() (max(up{job="node"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_memory_usage:percent
+    expr: 100 * (1 - taskboard:vm_memory_available:bytes / (taskboard:vm_memory_total:bytes > 0))
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_disk_usage:percent
+    expr: 100 * (1 - taskboard:vm_disk_free:bytes / (taskboard:vm_disk_total:bytes > 0))
+    labels:
+      host: vm-lab
+  - record: taskboard:vm_inode_usage:percent
+    expr: 100 * (1 - taskboard:vm_inode_free:count / (taskboard:vm_inode_total:count > 0))
+    labels:
+      host: vm-lab
+  - record: taskboard:container_last_seen:seconds
+    expr: max by (container_label_com_docker_compose_project, container_label_com_docker_compose_service) (container_last_seen{job="cadvisor",container_label_com_docker_compose_project=~"sysadmin-devops-pet-project|taskboard-monitoring",container_label_com_docker_compose_service!=""})
+      and on() (max(up{job="cadvisor"}) == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:container_cpu_usage:cores
+    expr: sum by (container_label_com_docker_compose_project, container_label_com_docker_compose_service) (rate(container_cpu_usage_seconds_total{job="cadvisor",container_label_com_docker_compose_project=~"sysadmin-devops-pet-project|taskboard-monitoring",container_label_com_docker_compose_service!=""}[1m])
+      and on(instance,id) (container_last_seen{job="cadvisor"} > time() - 120)) and on() (max(up{job="cadvisor"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:container_cpu_limit:cores
+    expr: sum by (container_label_com_docker_compose_project, container_label_com_docker_compose_service) (((container_spec_cpu_quota{job="cadvisor",container_label_com_docker_compose_project=~"sysadmin-devops-pet-project|taskboard-monitoring",container_label_com_docker_compose_service!=""}
+      > 0) / container_spec_cpu_period{job="cadvisor",container_label_com_docker_compose_project=~"sysadmin-devops-pet-project|taskboard-monitoring",container_label_com_docker_compose_service!=""})
+      and on(instance,id) (container_last_seen{job="cadvisor"} > time() - 120)) and on() (max(up{job="cadvisor"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:container_memory_usage:bytes
+    expr: sum by (container_label_com_docker_compose_project, container_label_com_docker_compose_service) (container_memory_working_set_bytes{job="cadvisor",container_label_com_docker_compose_project=~"sysadmin-devops-pet-project|taskboard-monitoring",container_label_com_docker_compose_service!=""}
+      and on(instance,id) (container_last_seen{job="cadvisor"} > time() - 120)) and on() (max(up{job="cadvisor"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:container_memory_limit:bytes
+    expr: sum by (container_label_com_docker_compose_project, container_label_com_docker_compose_service) ((container_spec_memory_limit_bytes{job="cadvisor",container_label_com_docker_compose_project=~"sysadmin-devops-pet-project|taskboard-monitoring",container_label_com_docker_compose_service!=""}
+      > 0) and on(instance,id) (container_last_seen{job="cadvisor"} > time() - 120)) and on() (max(up{job="cadvisor"})
+      == 1)
+    labels:
+      host: vm-lab
+  - record: taskboard:container_cpu_usage:percent
+    expr: 100 * taskboard:container_cpu_usage:cores / (taskboard:container_cpu_limit:cores > 0)
+    labels:
+      host: vm-lab
+  - record: taskboard:container_memory_usage:percent
+    expr: 100 * taskboard:container_memory_usage:bytes / (taskboard:container_memory_limit:bytes > 0)
+    labels:
+      host: vm-lab
+- name: taskboard.alerts
+  interval: 30s
+  rules:
+  - alert: VMCPULimitExceeded
+    expr: taskboard:vm_cpu_usage:percent > 95
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: VM CPU usage is above 95%
+      description: 'vm-lab CPU usage: {{ printf "%.1f" $value }}%. Threshold: >95% for 5 minutes.'
+  - alert: VMMemoryLimitExceeded
+    expr: taskboard:vm_memory_usage:percent > 95
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: VM memory usage is above 95%
+      description: 'vm-lab memory usage: {{ printf "%.1f" $value }}%. Threshold: >95% for 5 minutes.'
+  - alert: VMDiskLimitExceeded
+    expr: taskboard:vm_disk_usage:percent > 95
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: VM root disk usage is above 95%
+      description: 'vm-lab root disk usage: {{ printf "%.1f" $value }}%. Threshold: >95% for 5 minutes.'
+  - alert: VMInodeLimitExceeded
+    expr: taskboard:vm_inode_usage:percent > 95
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: VM root filesystem inodes usage is above 95%
+      description: 'vm-lab root filesystem inodes usage: {{ printf "%.1f" $value }}%. Threshold: >95% for 5 minutes.'
+  - alert: ContainerCPULimitExceeded
+    expr: taskboard:container_cpu_usage:percent > 95
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: Container CPU usage is above 95%
+      description: '{{ $labels.container_label_com_docker_compose_project }} / {{ $labels.container_label_com_docker_compose_service
+        }}: {{ printf "%.1f" $value }}% of the resource limit. Threshold: >95% for 5 minutes.'
+  - alert: ContainerMemoryLimitExceeded
+    expr: taskboard:container_memory_usage:percent > 95
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: Container MEMORY usage is above 95%
+      description: '{{ $labels.container_label_com_docker_compose_project }} / {{ $labels.container_label_com_docker_compose_service
+        }}: {{ printf "%.1f" $value }}% of the resource limit. Threshold: >95% for 5 minutes.'
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="backend"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="backend"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: sysadmin-devops-pet-project
+      container_label_com_docker_compose_service: backend
+    annotations:
+      summary: Expected container is not observed
+      description: sysadmin-devops-pet-project / backend has not been observed by cAdvisor. Condition persisted
+        for 5 minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="frontend"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="frontend"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: sysadmin-devops-pet-project
+      container_label_com_docker_compose_service: frontend
+    annotations:
+      summary: Expected container is not observed
+      description: sysadmin-devops-pet-project / frontend has not been observed by cAdvisor. Condition persisted
+        for 5 minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="db"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="sysadmin-devops-pet-project",container_label_com_docker_compose_service="db"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: sysadmin-devops-pet-project
+      container_label_com_docker_compose_service: db
+    annotations:
+      summary: Expected container is not observed
+      description: sysadmin-devops-pet-project / db has not been observed by cAdvisor. Condition persisted for 5
+        minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="prometheus"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="prometheus"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: prometheus
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / prometheus has not been observed by cAdvisor. Condition persisted for
+        5 minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="node-exporter"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="node-exporter"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: node-exporter
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / node-exporter has not been observed by cAdvisor. Condition persisted for
+        5 minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="cadvisor"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="cadvisor"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: cadvisor
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / cadvisor has not been observed by cAdvisor. Condition persisted for 5
+        minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="blackbox"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="blackbox"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: blackbox
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / blackbox has not been observed by cAdvisor. Condition persisted for 5
+        minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="grafana"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="grafana"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: grafana
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / grafana has not been observed by cAdvisor. Condition persisted for 5 minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="alertmanager"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="alertmanager"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: alertmanager
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / alertmanager has not been observed by cAdvisor. Condition persisted for
+        5 minutes.
+  - alert: ContainerNotObserved
+    expr: ((time() - taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="telegram-bot"}
+      > 120) or absent(taskboard:container_last_seen:seconds{container_label_com_docker_compose_project="taskboard-monitoring",container_label_com_docker_compose_service="telegram-bot"}))
+      and on() (max(up{job="cadvisor"}) == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+      container_label_com_docker_compose_project: taskboard-monitoring
+      container_label_com_docker_compose_service: telegram-bot
+    annotations:
+      summary: Expected container is not observed
+      description: taskboard-monitoring / telegram-bot has not been observed by cAdvisor. Condition persisted for
+        5 minutes.
+  - alert: WebsiteCheckFailed
+    expr: probe_success{job=~"taskboard_(dns|home|https|ready)"} == 0
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: Website check failed
+      description: 'Check: {{ $labels.job }}. Target: {{ $labels.instance }}. Failed continuously for 5 minutes.'
+  - alert: WebsiteResponseSlow
+    expr: (probe_duration_seconds{job=~"taskboard_(home|https|ready)"} > 3) and (probe_success{job=~"taskboard_(home|https|ready)"}
+      == 1)
+    for: 5m
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: Website response is slow
+      description: 'Check: {{ $labels.job }}. Current duration: {{ printf "%.3f" $value }} seconds. Threshold: >3
+        seconds for 5 minutes.'
+  - alert: TLSCertificateExpiring
+    expr: (probe_ssl_earliest_cert_expiry{job="taskboard_https"} - time()) / 86400 <= 7
+    for: 0s
+    labels:
+      severity: critical
+      host: vm-lab
+    annotations:
+      summary: TLS certificate expires within 7 days
+      description: 'Domain: tarabk-pet.polandcentral.cloudapp.azure.com. Remaining: {{ printf "%.2f" $value }} days.'

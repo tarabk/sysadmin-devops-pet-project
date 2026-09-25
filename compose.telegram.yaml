@@ -1,0 +1,72 @@
+services:
+  prometheus:
+    volumes:
+    - type: bind
+      source: ./deploy/monitoring/telegram-prometheus.yml
+      target: /etc/prometheus/prometheus.yml
+      read_only: true
+      bind:
+        create_host_path: false
+        selinux: Z
+    - type: bind
+      source: ./deploy/monitoring/telegram-rules.yml
+      target: /etc/prometheus/telegram-rules.yml
+      read_only: true
+      bind:
+        create_host_path: false
+        selinux: Z
+  blackbox:
+    volumes:
+    - type: bind
+      source: ./deploy/monitoring/telegram-blackbox.yml
+      target: /etc/blackbox_exporter/blackbox.yml
+      read_only: true
+      bind:
+        create_host_path: false
+        selinux: Z
+  alertmanager:
+    volumes:
+    - type: bind
+      source: /etc/taskboard-monitoring/telg-bot
+      target: /run/secrets/telegram-bot-token
+      read_only: true
+      bind:
+        create_host_path: false
+        selinux: z
+  telegram-bot:
+    build:
+      context: ./deploy/telegram-bot
+    image: taskboard-telegram-bot:1.0
+    user: 65534:65534
+    network_mode: host
+    init: true
+    read_only: true
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
+    volumes:
+    - type: bind
+      source: /etc/taskboard-monitoring/telegram-bot.json
+      target: /etc/taskboard-bot/config.json
+      read_only: true
+      bind:
+        create_host_path: false
+        selinux: Z
+    - type: bind
+      source: /etc/taskboard-monitoring/telg-bot
+      target: /run/secrets/telegram-bot-token
+      read_only: true
+      bind:
+        create_host_path: false
+        selinux: z
+    restart: unless-stopped
+    stop_grace_period: 45s
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
