@@ -6,8 +6,16 @@ services:
     env_file:
       - path: /home/tarabk/.config/taskboard/postgres.env
         format: raw
+      - path: /home/tarabk/.config/taskboard/bootstrap.env
+        format: raw
     volumes:
       - "db_data:/var/lib/postgresql/data"
+      - type: bind
+        source: ./deploy/postgres/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind:
+          create_host_path: false
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres"]
       interval: 10s

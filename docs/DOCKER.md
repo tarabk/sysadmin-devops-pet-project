@@ -45,8 +45,10 @@ The Azure deployment still runs without containers.
 - Health check: `pg_isready`, every 10 seconds, with a 5-second timeout,
   3 retries and a 30-second start period.
 
-Compose reuses the existing volume. The database, roles and permissions
-were created manually; setup for an empty volume is not yet automated.
+Compose uses the existing external volume `taskboard-sqldata`.
+For a new deployment, create the volume before starting Compose.
+The initialization script creates the database, roles and permissions
+when the volume is empty.
 
 ## Frontend and Nginx
 
@@ -69,7 +71,24 @@ were created manually; setup for an empty volume is not yet automated.
 - Environment files: `postgres.env`, `migration.env`, `backend.env`.
 - Environment file permissions: `600`.
 - Compose reads environment files with `format: raw`.
-- Environment file paths currently target the local WSL setup.
+- Environment files: `postgres.env`, `bootstrap.env`, `migration.env`, `backend.env`.
+
+## Database Initialization
+
+- Initialization script: `deploy/postgres/init/10-taskboard.sh`.
+- Mounted read-only at `/docker-entrypoint-initdb.d`.
+- Runs when PostgreSQL initializes an empty data directory.
+- Creates the `taskboard` database and two login roles:
+  `taskboard_migrator` and `taskboard_user`.
+- `taskboard_migrator` owns the database.
+- Default privileges grant runtime access to tables and sequences
+  created by `taskboard_migrator` in the `public` schema.
+- Role passwords are read from `bootstrap.env`, stored outside the repository.
+- Alembic migrations run separately after database initialization.
+- Existing database volumes are left unchanged by the initialization script.
+
+Initialization was tested with a separate empty volume.
+Migration `0001` completed, and CRUD operations passed using `taskboard_user`.
 
 ## Migrations
 
@@ -164,5 +183,4 @@ for this container deployment.
 
 ## Next Steps
 
-- Document setup for a new database volume, including roles and permissions.
 - Prepare the Azure transition, including HTTPS, data transfer and rollback.
