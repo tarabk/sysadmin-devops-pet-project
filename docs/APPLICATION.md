@@ -11,8 +11,10 @@ A task board for creating, updating and deleting server maintenance tasks.
 - `tests/` — API, validation and database failure tests.
 - `deploy/` — nginx, systemd and maintenance scripts for the Azure deployment.
 
-For server configuration, see [Server Setup](SRV-SETUP.md).
-The instructions below cover local development.
+These instructions cover local development with Python and PostgreSQL on the host.
+For local containers, see [Docker deployment](DOCKER.md). For the running server,
+see [Azure Docker deployment](AZURE-DOCKER.md).
+[Server setup](SRV-SETUP.md) records the initial systemd deployment.
 
 ## Requirements
 
@@ -26,8 +28,9 @@ The application does not install PostgreSQL, create roles or create the database
 
 For local setup, the migration role needs permission to create database
 objects. A separate runtime role needs access to the application tables
-and sequences. The deployed role configuration is documented in
-[Server Setup](SRV-SETUP.md).
+and sequences. The container initialization script is
+[`deploy/postgres/init/10-taskboard.sh`](../deploy/postgres/init/10-taskboard.sh).
+The original host PostgreSQL setup is recorded in [Server Setup](SRV-SETUP.md).
 
 ## Backend Setup
 
@@ -211,3 +214,5 @@ The Azure deployment restricts access through NSG and nginx rules.
 
 See [deployment configuration](../deploy/) and
 [server setup notes](SRV-SETUP.md) for the current server settings.
+Telegram menu and alert-rule tests are documented in
+[Telegram monitoring](TELEGRAM-MONITORING.md).

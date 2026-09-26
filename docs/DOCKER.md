@@ -1,5 +1,9 @@
 # Docker Deployment
 
+This guide records the local WSL lab. Commands use the repository at
+`/home/tarabk/projects/sysadmin-devops-pet-project` and local environment files.
+Azure uses a separate configuration directory and backup service.
+
 ## Current Status
 
 Backend, PostgreSQL and nginx run through Docker Compose in local WSL.
@@ -73,6 +77,7 @@ when the volume is empty.
 - Environment file permissions: `600`.
 - Compose reads environment files with `format: raw`.
 - Environment files: `postgres.env`, `bootstrap.env`, `migration.env`, `backend.env`.
+- `TASKBOARD_ENV_DIR` overrides the configuration directory.
 
 ## Database Initialization
 
@@ -156,10 +161,11 @@ Recovery on a fresh instance has not yet been tested.
 - Temporary files are renamed after a successful dump.
 - Completed archives older than seven days are removed after a successful backup.
 - Manual service execution completed successfully.
-- The first scheduled execution has not yet been observed.
+- A successful manual run was recorded; a scheduled local run was not recorded.
 
-Backups are stored on the WSL host. Off-host transfers are not yet configured
-for this container deployment.
+This local backup script stores archives on the WSL host.
+The Azure deployment uses a separate script that uploads to Blob Storage;
+see [Azure backups](AZURE-DOCKER.md#backups).
 
 ## Verified
 
@@ -182,6 +188,9 @@ for this container deployment.
 - Average response time: 22 ms; maximum: 60 ms in the local test.
 - All three services remained healthy without container restarts.
 
-## Next Steps
+## Azure and Monitoring
 
-- Prepare the Azure transition, including HTTPS, data transfer and rollback.
+The Azure migration is complete. Data transfer, HTTPS routing, backups and
+rollback procedures are documented in [Azure deployment](AZURE-DOCKER.md).
+The deployed monitoring stack is documented in
+[Telegram monitoring](TELEGRAM-MONITORING.md).

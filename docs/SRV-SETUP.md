@@ -1,8 +1,11 @@
 # Server Setup
 
-The sections below record the initial native deployment.
-The current container deployment is documented in
-[Azure Docker deployment](AZURE-DOCKER.md).
+These notes record the original deployment before Docker. The PostgreSQL,
+backend, nginx routing and backup descriptions below refer to that stage.
+The native backend, database and backup timer are now stopped and disabled.
+
+Current operations: [Azure Docker deployment](AZURE-DOCKER.md).
+Monitoring and Telegram: [Telegram monitoring](TELEGRAM-MONITORING.md).
 
 ## Infrastructure
 - Azure VM: vm-lab, Poland Central, availability zone 2.
@@ -147,3 +150,4 @@ The current container deployment is documented in
 - Native Taskboard, PostgreSQL and the old backup timer disabled.
 - Previous application files and database retained for recovery.
 - Operational procedures: [Azure Docker deployment](AZURE-DOCKER.md).
+- Monitoring procedures: [Telegram monitoring](TELEGRAM-MONITORING.md).

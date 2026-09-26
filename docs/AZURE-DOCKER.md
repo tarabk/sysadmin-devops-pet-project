@@ -161,3 +161,39 @@ To return to the native deployment after new writes:
 
 Do not route users back to the retained native database without transferring
 new data or explicitly accepting its loss.
+
+## Monitoring
+
+Prometheus, Node Exporter, cAdvisor, Blackbox Exporter, Grafana, Alertmanager
+and the Telegram menu bot run in the `taskboard-monitoring` Compose project.
+Use both configuration files, in this order:
+
+```bash
+sudo docker compose \
+  -f compose.monitoring.yaml -f compose.telegram.yaml ps
+```
+
+- Settings and credentials: `/etc/taskboard-monitoring`.
+- Grafana data: `grafana_data`; Prometheus data: `prometheus_data`.
+- Alertmanager state: `alertmanager_data`.
+- Monitoring listeners bind to loopback.
+- Prometheus retention: seven days or the 2 GB retention-size limit.
+- Grafana dashboard: `Taskboard — Azure`, eight panels.
+- Telegram menus show VM, container and website metrics.
+- Resource alerts use >95% for five minutes; certificate alerts use <=7 days.
+- A test confirmed both firing and resolved Telegram notifications.
+
+From WSL, open Grafana through an SSH tunnel:
+
+```bash
+ssh -i ~/.ssh/vm-lab-key.pem \
+  -N -o ExitOnForwardFailure=yes \
+  -L 127.0.0.1:19300:127.0.0.1:3000 \
+  azureuser@tarabk-pet.polandcentral.cloudapp.azure.com
+```
+
+Open `http://localhost:19300` in the local browser. Keep the tunnel open.
+Full menu, alert and operation details: [Telegram monitoring](TELEGRAM-MONITORING.md).
+
+Monitoring is hosted on this VM. Its local HTTPS probes do not verify public
+NSG access, and it cannot notify Telegram during a complete VM outage.

@@ -1,6 +1,6 @@
 # Telegram monitoring
 
-English menus and alerts for the existing Taskboard monitoring stack on `vm-lab`.
+Menus and alerts for the existing Taskboard monitoring stack on `vm-lab`.
 The bot reads Prometheus and has no Docker socket or host filesystem access.
 It uses the existing Telegram bot token. Alertmanager sends alerts; the new
 `telegram-bot` container handles menu buttons through long polling.
@@ -86,12 +86,10 @@ requires a separate observer and an explicitly permitted source IP.
 | `tests/test_telegram_menu.py` | Offline menu, permission and data handling tests |
 | `tests/telegram-rules.test.yml` | Prometheus rule tests |
 
-The archive adds these paths. It does not include or replace the existing
-`README.md`, `compose.monitoring.yaml`, Grafana data or secret files.
-It assumes the exact service names and paths established in the project.
-The overlay mounts alternative Prometheus and Blackbox configuration files.
-If the base configuration gained other jobs after this package was prepared,
-merge those into `telegram-prometheus.yml` before enabling the overlay.
+The overlay mounts `telegram-prometheus.yml` and `telegram-blackbox.yml` in
+place of the base configuration files. Edit these active files when changing
+checks. Keep additional jobs in `telegram-prometheus.yml`; changes made only
+to the base `prometheus.yml` will not affect the running overlay deployment.
 
 ## 1. Prepare the VM
 
@@ -238,10 +236,11 @@ curl -fsS --max-time 10 \
   'http://127.0.0.1:9090/api/v1/rules?type=alert'
 ```
 
-Rule unit tests do not prove real Telegram delivery from Prometheus. A controlled
-end-to-end alert and recovery check is still required on the VM. Use a temporary
-test rule in a separate file, or a planned short application outage; do not fill
-the VM disk or exhaust memory to test a threshold.
+An end-to-end test on the VM confirmed both `firing` and `resolved` messages
+from Prometheus through Alertmanager. The temporary, time-limited test rule was
+removed, the original 36 rules restored and Prometheus recreated.
+For future delivery checks, use a temporary synthetic alert and remove it before
+committing. Threshold unit tests run without loading the VM or sending Telegram messages.
 
 ## 5. Version control after validation
 
@@ -272,10 +271,12 @@ sudo docker compose \
 sudo docker compose -f compose.monitoring.yaml \
   up -d --no-deps --force-recreate blackbox prometheus alertmanager
 ```
+The Grafana dashboard is stored in `grafana_data`. The repository does not
+currently contain an exported dashboard JSON or Grafana provisioning files.
+Retain that volume or export the dashboard before rebuilding Grafana elsewhere.
+Do not use `down -v` to roll back this configuration.
 
-Keep the overlay files in the repository for review. Do not use `down -v`.
-
-## Validation performed during preparation
+## Verification
 
 - 18 Python unittest checks passed: menu navigation, callback sizes, access
   restrictions, stale/missing values, unavailable Prometheus and configuration.
@@ -283,8 +284,9 @@ Keep the overlay files in the repository for review. Do not use `down -v`.
 - Five `promtool test rules` scenarios passed: sustained VM CPU, the exact
   95% boundary, container CPU quota normalization, sustained HTTP failure,
   and the seven-day certificate boundary.
-- Real VM metrics, image build, Compose merge on the VM, DNS probe results and
-  Telegram menu interaction must be checked during deployment.
+- Image built and merged Compose configuration validated on the VM.
+- VM/container metric views, DNS and HTTP checks, and Telegram navigation verified.
+- End-to-end firing and resolved notifications received; temporary rule removed.
 
 ## References
 
